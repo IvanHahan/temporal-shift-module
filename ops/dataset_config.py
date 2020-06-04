@@ -5,7 +5,7 @@
 
 import os
 
-ROOT_DATASET = '/ssd/video/'  # '/data/jilin/'
+ROOT_DATASET = '/home/ihahanov/Projects/TemporalShiftModule'  # '/data/jilin/'
 
 
 def return_ucf101(modality):
@@ -101,10 +101,19 @@ def return_kinetics(modality):
     return filename_categories, filename_imglist_train, filename_imglist_val, root_data, prefix
 
 
+def return_nandos(modality):
+    filename_categories = 4
+    root_data = 'data/images'
+    filename_imglist_train = 'data/train.txt'
+    filename_imglist_val = 'data/test.txt'
+    prefix = '{:08d}.jpg'
+    return filename_categories, filename_imglist_train, filename_imglist_val, root_data, prefix
+
+
 def return_dataset(dataset, modality):
     dict_single = {'jester': return_jester, 'something': return_something, 'somethingv2': return_somethingv2,
                    'ucf101': return_ucf101, 'hmdb51': return_hmdb51,
-                   'kinetics': return_kinetics }
+                   'kinetics': return_kinetics, 'nandos': return_nandos}
     if dataset in dict_single:
         file_categories, file_imglist_train, file_imglist_val, root_data, prefix = dict_single[dataset](modality)
     else:

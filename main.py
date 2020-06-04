@@ -30,6 +30,7 @@ def main():
 
     num_class, args.train_list, args.val_list, args.root_path, prefix = dataset_config.return_dataset(args.dataset,
                                                                                                       args.modality)
+
     full_arch_name = args.arch
     if args.shift:
         full_arch_name += '_shift{}_{}'.format(args.shift_div, args.shift_place)
@@ -150,8 +151,8 @@ def main():
                        normalize,
                    ]), dense_sample=args.dense_sample),
         batch_size=args.batch_size, shuffle=True,
-        num_workers=args.workers, pin_memory=True,
-        drop_last=True)  # prevent something not % n_GPU
+        num_workers=args.workers, pin_memory=True,)
+        #drop_last=True)  # prevent something not % n_GPU
 
     val_loader = torch.utils.data.DataLoader(
         TSNDataSet(args.root_path, args.val_list, num_segments=args.num_segments,
@@ -232,6 +233,7 @@ def train(train_loader, model, criterion, optimizer, epoch, log, tf_writer):
     model.train()
 
     end = time.time()
+    accs = []
     for i, (input, target) in enumerate(train_loader):
         # measure data loading time
         data_time.update(time.time() - end)
@@ -245,10 +247,11 @@ def train(train_loader, model, criterion, optimizer, epoch, log, tf_writer):
         loss = criterion(output, target_var)
 
         # measure accuracy and record loss
-        prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
+        prec1, prec5, acc = accuracy(output.data, target, topk=(1, 3))
         losses.update(loss.item(), input.size(0))
         top1.update(prec1.item(), input.size(0))
         top5.update(prec5.item(), input.size(0))
+        accs.append(acc)
 
         # compute gradient and do SGD step
         loss.backward()
@@ -275,6 +278,7 @@ def train(train_loader, model, criterion, optimizer, epoch, log, tf_writer):
             print(output)
             log.write(output + '\n')
             log.flush()
+    print('train acc', np.mean(accs))
 
     tf_writer.add_scalar('loss/train', losses.avg, epoch)
     tf_writer.add_scalar('acc/train_top1', top1.avg, epoch)
@@ -292,16 +296,20 @@ def validate(val_loader, model, criterion, epoch, log=None, tf_writer=None):
     model.eval()
 
     end = time.time()
+    accs = []
     with torch.no_grad():
         for i, (input, target) in enumerate(val_loader):
             target = target.cuda()
 
             # compute output
             output = model(input)
+
             loss = criterion(output, target)
 
             # measure accuracy and record loss
-            prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
+            print(output.shape, target.shape)
+            prec1, prec5, acc = accuracy(output.data, target, topk=(1, 3))
+            accs.append(acc)
 
             losses.update(loss.item(), input.size(0))
             top1.update(prec1.item(), input.size(0))
@@ -323,6 +331,7 @@ def validate(val_loader, model, criterion, epoch, log=None, tf_writer=None):
                 if log is not None:
                     log.write(output + '\n')
                     log.flush()
+        print('acc', np.mean(accs))
 
     output = ('Testing Results: Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f} Loss {loss.avg:.5f}'
               .format(top1=top1, top5=top5, loss=losses))

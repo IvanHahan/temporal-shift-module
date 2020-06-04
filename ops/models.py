@@ -72,7 +72,7 @@ class TSN(nn.Module):
         self.consensus = ConsensusModule(consensus_type)
 
         if not self.before_softmax:
-            self.softmax = nn.Softmax()
+            self.softmax = nn.Softmax(dim=1)
 
         self._enable_pbn = partial_bn
         if partial_bn:
@@ -277,6 +277,7 @@ class TSN(nn.Module):
 
         if not self.before_softmax:
             base_out = self.softmax(base_out)
+            print(base_out)
 
         if self.reshape:
             if self.is_shift and self.temporal_pool:
@@ -284,6 +285,7 @@ class TSN(nn.Module):
             else:
                 base_out = base_out.view((-1, self.num_segments) + base_out.size()[1:])
             output = self.consensus(base_out)
+            # print(output)
             return output.squeeze(1)
 
     def _get_diff(self, input, keep_rgb=False):

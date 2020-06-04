@@ -114,6 +114,7 @@ class TSNDataSet(data.Dataset):
             t_stride = 64 // self.num_segments
             start_idx = 0 if sample_pos == 1 else np.random.randint(0, sample_pos - 1)
             offsets = [(idx * t_stride + start_idx) % record.num_frames for idx in range(self.num_segments)]
+
             return np.array(offsets) + 1
         else:  # normal sample
             average_duration = (record.num_frames - self.new_length + 1) // self.num_segments
@@ -165,7 +166,6 @@ class TSNDataSet(data.Dataset):
     def __getitem__(self, index):
         record = self.video_list[index]
         # check this is a legit video folder
-
         if self.image_tmpl == 'flow_{}_{:05d}.jpg':
             file_name = self.image_tmpl.format('x', 1)
             full_path = os.path.join(self.root_path, record.path, file_name)
@@ -206,7 +206,6 @@ class TSNDataSet(data.Dataset):
                 images.extend(seg_imgs)
                 if p < record.num_frames:
                     p += 1
-
         process_data = self.transform(images)
         return process_data, record.label
 
