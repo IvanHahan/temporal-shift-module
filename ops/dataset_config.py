@@ -102,10 +102,10 @@ def return_kinetics(modality):
 
 
 def return_nandos(modality):
-    filename_categories = 4
-    root_data = 'data/images'
-    filename_imglist_train = 'data/train.txt'
-    filename_imglist_val = 'data/test.txt'
+    filename_categories = 12
+    root_data = 'data/actions'
+    filename_imglist_train = 'data/actions_train.txt'
+    filename_imglist_val = 'data/actions_test.txt'
     prefix = '{:08d}.jpg'
     return filename_categories, filename_imglist_train, filename_imglist_val, root_data, prefix
 

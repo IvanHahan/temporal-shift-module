@@ -27,7 +27,9 @@ class AverageMeter(object):
 
 def accuracy(output, target, topk=(1,)):
     """Computes the precision@k for the specified values of k"""
+
     acc = output.argmax(dim=-1).eq(target).sum().double().div(output.shape[0])
+    # print(output.argmax(dim=-1), target)
     # print('acc', acc.item())
     maxk = max(topk)
     batch_size = target.size(0)

@@ -140,7 +140,7 @@ def main():
         data_length = 5
 
     train_loader = torch.utils.data.DataLoader(
-        TSNDataSet(args.root_path, args.train_list, num_segments=args.num_segments,
+        TSNDataSet(args.root_path, args.train_list, num_class, num_segments=args.num_segments,
                    new_length=data_length,
                    modality=args.modality,
                    image_tmpl=prefix,
@@ -155,7 +155,7 @@ def main():
         #drop_last=True)  # prevent something not % n_GPU
 
     val_loader = torch.utils.data.DataLoader(
-        TSNDataSet(args.root_path, args.val_list, num_segments=args.num_segments,
+        TSNDataSet(args.root_path, args.val_list, num_class, num_segments=args.num_segments,
                    new_length=data_length,
                    modality=args.modality,
                    image_tmpl=prefix,
@@ -244,6 +244,7 @@ def train(train_loader, model, criterion, optimizer, epoch, log, tf_writer):
 
         # compute output
         output = model(input_var)
+        # print(output, target_var)
         loss = criterion(output, target_var)
 
         # measure accuracy and record loss
@@ -307,7 +308,6 @@ def validate(val_loader, model, criterion, epoch, log=None, tf_writer=None):
             loss = criterion(output, target)
 
             # measure accuracy and record loss
-            print(output.shape, target.shape)
             prec1, prec5, acc = accuracy(output.data, target, topk=(1, 3))
             accs.append(acc)
 

@@ -29,7 +29,7 @@ class VideoRecord(object):
 
 
 class TSNDataSet(data.Dataset):
-    def __init__(self, root_path, list_file,
+    def __init__(self, root_path, list_file, num_classes,
                  num_segments=3, new_length=1, modality='RGB',
                  image_tmpl='img_{:05d}.jpg', transform=None,
                  random_shift=True, test_mode=False,
@@ -47,6 +47,7 @@ class TSNDataSet(data.Dataset):
         self.remove_missing = remove_missing
         self.dense_sample = dense_sample  # using dense sample as I3D
         self.twice_sample = twice_sample  # twice sample for more validation
+        self.num_classes = num_classes
         if self.dense_sample:
             print('=> Using dense sample for the dataset...')
         if self.twice_sample:
