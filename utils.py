@@ -1,5 +1,6 @@
 import json
 import os
+import cv2
 
 
 def parse_annotation(path):
@@ -11,3 +12,9 @@ def parse_annotation(path):
 def make_dir_if_needed(dir_):
     if not os.path.exists(dir_):
         os.makedirs(dir_)
+
+
+def resize_image(image, size=600):
+    width = int(size * image.shape[1] / image.shape[0] if image.shape[0] > image.shape[1] else size)
+    height = int(size * image.shape[0] / image.shape[1] if image.shape[0] < image.shape[1] else size)
+    return cv2.resize(image, (width, height))

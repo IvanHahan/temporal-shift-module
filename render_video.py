@@ -7,7 +7,7 @@ import torchvision
 
 from ops.models import TSN
 from ops.transforms import *
-from utils import make_dir_if_needed, parse_annotation
+from utils import make_dir_if_needed, parse_annotation, resize_image
 import torch
 from matplotlib import pyplot as plt
 import glob
@@ -76,7 +76,7 @@ if __name__ == '__main__':
 
     cache = {}
     video_writer = cv2.VideoWriter('out.avi', 0, 30, (1920, 1080))
-    for frame in tqdm(sorted(glob.glob(os.path.join(args.frames_dir, '*.jpg')))[:1000]):
+    for frame in tqdm(sorted(glob.glob(os.path.join(args.frames_dir, '*.jpg')))[:25000][::3]):
         frame_name = os.path.splitext(frame)[0]
         annot_name = frame_name + '.json'
         annot_path = os.path.join(args.frames_dir, annot_name)
@@ -129,6 +129,7 @@ if __name__ == '__main__':
                     image = cv2.rectangle(image, (x1, y1), (x2, y2), color, thickness=3)
 
                     image = put_text(image, label_name, x1, y1, color, 3)
+                    image = resize_image(image, 400)
                     video_writer.write(image)
 
                     cache[label].pop(0)
