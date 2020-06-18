@@ -76,6 +76,15 @@ class GroupNormalize(object):
         return tensor
 
 
+class GroupToPIL(object):
+
+    def __init__(self):
+        self.worker = torchvision.transforms.ToPILImage()
+
+    def __call__(self, img_group):
+        return [self.worker(img) for img in img_group]
+
+
 class GroupScale(object):
     """ Rescales the input PIL.Image to the given 'size'.
     'size' will be the size of the smaller edge.

@@ -394,3 +394,25 @@ class TSN(nn.Module):
         elif self.modality == 'RGBDiff':
             return torchvision.transforms.Compose([GroupMultiScaleCrop(self.input_size, [1, .875, .75]),
                                                    GroupRandomHorizontalFlip(is_flow=False)])
+    #
+    # def load_weights(self, sd):
+    #     sd = sd['state_dict']
+    #     model_dict = self.state_dict()
+    #     replace_dict = []
+    #     for k, v in sd.items():
+    #         if k not in model_dict and k.replace('.net', '') in model_dict:
+    #             print('=> Load after remove .net: ', k)
+    #             replace_dict.append((k, k.replace('.net', '')))
+    #     for k, v in model_dict.items():
+    #         if k not in sd and k.replace('.net', '') in sd:
+    #             print('=> Load after adding .net: ', k)
+    #             replace_dict.append((k.replace('.net', ''), k))
+    #
+    #     for k, k_new in replace_dict:
+    #         sd[k_new] = sd.pop(k)
+    #     keys1 = set(list(sd.keys()))
+    #     keys2 = set(list(model_dict.keys()))
+    #     set_diff = (keys1 - keys2) | (keys2 - keys1)
+    #     print('#### Notice: keys that failed to load: {}'.format(set_diff))
+    #     model_dict.update(sd)
+    #     self.load_state_dict(model_dict)
