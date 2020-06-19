@@ -12,12 +12,13 @@ import torch
 from matplotlib import pyplot as plt
 import glob
 from tqdm import tqdm
+np.random.seed(45)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--frames_dir', default='/Users/UnicornKing/20180101_120040')
 parser.add_argument('--num_segments', default=8, type=int)
 parser.add_argument('--model',
-                    default='checkpoint/ckpt.best.pth.tar')
+                    default='checkpoint/TSM_nandos_RGB_resnet50_shift8_blockres_avg_segment8_e100/ckpt.pth.tar')
 parser.add_argument('--device', default='cpu')
 
 actions = list({'food_flip': 0,
@@ -50,8 +51,9 @@ if __name__ == '__main__':
     #                if os.path.splitext(file)[-1] == '.json'}
 
     # model = TSN(len(actions), args.num_segments, 'RGB', 'resnet50').to(args.device)
+    arch = 'resnet50'
     tsn = TSN(len(actions), args.num_segments, 'RGB',
-                base_model='resnet50',
+                base_model=arch,
                 consensus_type='avg',
                 dropout=0.5,
                 img_feature_dim=256,
@@ -68,14 +70,13 @@ if __name__ == '__main__':
     model.load_state_dict(sd)
     model.eval()
 
-
     r = np.random.randint(0, 255, (len(actions), 1))
     g = np.random.randint(0, 255, (len(actions), 1))
     b = np.random.randint(0, 255, (len(actions), 1))
     colors = np.column_stack([r, g, b]).tolist()
 
     cache = {}
-    video_writer = cv2.VideoWriter('out.avi', 0, 30, (1920, 1080))
+    video_writer = cv2.VideoWriter('out.avi', 0, 15, (1000, 562))
     for frame in tqdm(sorted(glob.glob(os.path.join(args.frames_dir, '*.jpg')))[:25000][::3]):
         frame_name = os.path.splitext(frame)[0]
         annot_name = frame_name + '.json'
@@ -99,9 +100,9 @@ if __name__ == '__main__':
                         GroupToPIL(),
                         GroupScale(int(tsn.scale_size)),
                         GroupCenterCrop(tsn.crop_size),
-                        Stack(roll=False),
-                        ToTorchFormatTensor(div=False),
-                        IdentityTransform(),
+                        Stack(roll=(arch in ['BNInception', 'InceptionV3'])),
+                        ToTorchFormatTensor(div=(arch not in ['BNInception', 'InceptionV3'])),
+
                     ])
 
                     rois = []
@@ -114,26 +115,28 @@ if __name__ == '__main__':
 
                     rois = transforms(rois).to(args.device)
 
-                    # input_ = torch.tensor(rois).to(args.device)
-
-                    output = model(rois)[0].detach().argmax().cpu().numpy()
+                    output = model(rois)
+                    output = output[0].detach().argmax().cpu().numpy()
 
                     label_name = actions[output]
                     color = colors[output]
 
-                    item = cache[label][-1]
-                    x1, y1 = item['points'][0]
-                    x2, y2 = item['points'][1]
+                    x1, y1 = shape['points'][0]
+                    x2, y2 = shape['points'][1]
 
-                    image = item['image']
                     image = cv2.rectangle(image, (x1, y1), (x2, y2), color, thickness=3)
 
                     image = put_text(image, label_name, x1, y1, color, 3)
-                    image = resize_image(image, 400)
+                    image = resize_image(image, 1000)
+
                     video_writer.write(image)
 
                     cache[label].pop(0)
+                else:
+                    image = resize_image(image, 1000)
+                    video_writer.write(image)
         else:
+            image = resize_image(image, 1000)
             video_writer.write(image)
     video_writer.release()
 
