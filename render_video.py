@@ -46,11 +46,6 @@ def put_text(image, text, x, y, color, scale=5, thickness=2):
 if __name__ == '__main__':
     args = parser.parse_args()
 
-    # annotations = {os.path.splitext(file)[0]: parse_annotation(os.path.join(args.frames_dir, file)) for file in
-    #                sorted(os.listdir(args.frames_dir))
-    #                if os.path.splitext(file)[-1] == '.json'}
-
-    # model = TSN(len(actions), args.num_segments, 'RGB', 'resnet50').to(args.device)
     arch = 'resnet50'
     tsn = TSN(len(actions), args.num_segments, 'RGB',
                 base_model=arch,
@@ -127,14 +122,10 @@ if __name__ == '__main__':
                     image = cv2.rectangle(image, (x1, y1), (x2, y2), color, thickness=3)
 
                     image = put_text(image, label_name, x1, y1, color, 3)
-                    image = resize_image(image, 1000)
-
-                    video_writer.write(image)
 
                     cache[label].pop(0)
-                else:
-                    image = resize_image(image, 1000)
-                    video_writer.write(image)
+            image = resize_image(image, 1000)
+            video_writer.write(image)
         else:
             image = resize_image(image, 1000)
             video_writer.write(image)
