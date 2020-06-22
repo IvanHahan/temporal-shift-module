@@ -18,21 +18,22 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--frames_dir', default='/Users/UnicornKing/20180101_120040')
 parser.add_argument('--num_segments', default=8, type=int)
 parser.add_argument('--model',
-                    default='checkpoint/TSM_nandos_RGB_resnet50_shift8_blockres_avg_segment8_e100/ckpt.pth.tar')
+                    default='checkpoint/TSM_nandos_RGB_resnet50_shift8_blockres_avg_segment8_e50/ckpt.pth.tar')
 parser.add_argument('--device', default='cpu')
 
-actions = list({'food_flip': 0,
-                'food_drizzle': 1,
-                'food_place': 2,
-                'food_remove': 3,
-                'fries_cooking': 4,
-                'fries_serving': 5,
-                'food_packaging': 6,
-                'package_serving': 7,
-                'food_sauce': 8,
-                'food_warm_start': 9,
-                'food_warm_end': 10,
-                'burger_serving': 11}.keys())
+action_to_idx = {'food_flip': 0,
+                 'food_drizzle': 1,
+                 'food_place': 2,
+                 'food_remove': 3,
+                 'fries_cooking': 4,
+                 'fries_serving': 5,
+                 'food_packaging': 6,
+                 'package_serving': 7,
+                 'food_sauce': 8,
+                 'food_warm_start': 9,
+                 'food_warm_end': 10,
+                 'burger_serving': 11}
+idx_to_action = {v: k for k, v in action_to_idx.items()}
 
 
 def put_text(image, text, x, y, color, scale=5, thickness=2):
@@ -47,7 +48,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     arch = 'resnet50'
-    tsn = TSN(len(actions), args.num_segments, 'RGB',
+    tsn = TSN(len(action_to_idx), args.num_segments, 'RGB',
                 base_model=arch,
                 consensus_type='avg',
                 dropout=0.5,
@@ -65,14 +66,14 @@ if __name__ == '__main__':
     model.load_state_dict(sd)
     model.eval()
 
-    r = np.random.randint(0, 255, (len(actions), 1))
-    g = np.random.randint(0, 255, (len(actions), 1))
-    b = np.random.randint(0, 255, (len(actions), 1))
+    r = np.random.randint(0, 255, (len(action_to_idx), 1))
+    g = np.random.randint(0, 255, (len(action_to_idx), 1))
+    b = np.random.randint(0, 255, (len(action_to_idx), 1))
     colors = np.column_stack([r, g, b]).tolist()
 
     cache = {}
-    video_writer = cv2.VideoWriter('out.avi', 0, 15, (1000, 562))
-    for frame in tqdm(sorted(glob.glob(os.path.join(args.frames_dir, '*.jpg')))[:25000][::3]):
+    video_writer = cv2.VideoWriter('out.avi', 0, 10, (1200, 675))
+    for frame in tqdm(sorted(glob.glob(os.path.join(args.frames_dir, '*.jpg')))[:25000][::2]):
         frame_name = os.path.splitext(frame)[0]
         annot_name = frame_name + '.json'
         annot_path = os.path.join(args.frames_dir, annot_name)
@@ -82,7 +83,7 @@ if __name__ == '__main__':
             annot = parse_annotation(annot_path)
             for shape in annot['shapes']:
                 label = shape['label']
-                if re.sub(r'_\d+', '', label) not in actions:
+                if re.sub(r'_\d+', '', label) not in action_to_idx:
                     continue
 
                 cache.setdefault(label, [])
@@ -97,7 +98,7 @@ if __name__ == '__main__':
                         GroupCenterCrop(tsn.crop_size),
                         Stack(roll=(arch in ['BNInception', 'InceptionV3'])),
                         ToTorchFormatTensor(div=(arch not in ['BNInception', 'InceptionV3'])),
-
+                        GroupNormalize(tsn.input_mean, tsn.input_std),
                     ])
 
                     rois = []
@@ -111,9 +112,9 @@ if __name__ == '__main__':
                     rois = transforms(rois).to(args.device)
 
                     output = model(rois)
-                    output = output[0].detach().argmax().cpu().numpy()
+                    output = int(output[0].detach().argmax().cpu().numpy())
 
-                    label_name = actions[output]
+                    label_name = idx_to_action[output]
                     color = colors[output]
 
                     x1, y1 = shape['points'][0]
@@ -124,10 +125,10 @@ if __name__ == '__main__':
                     image = put_text(image, label_name, x1, y1, color, 3)
 
                     cache[label].pop(0)
-            image = resize_image(image, 1000)
+            image = resize_image(image, 1200)
             video_writer.write(image)
         else:
-            image = resize_image(image, 1000)
+            image = resize_image(image, 1200)
             video_writer.write(image)
     video_writer.release()
 
