@@ -208,7 +208,29 @@ class TSNDataSet(data.Dataset):
                 if p < record.num_frames:
                     p += 1
         process_data = self.transform(images)
+        # print(process_data[0,0,0])
         return process_data, record.label
 
     def __len__(self):
         return len(self.video_list)
+
+
+if __name__ == '__main__':
+    import torch
+    import torchvision
+    from ops.transforms import *
+
+    train_loader = torch.utils.data.DataLoader(
+        TSNDataSet('data/actions', 'data/actions_train.txt', 12, num_segments=8,
+                   new_length=1,
+                   modality='RGB',
+                   image_tmpl='{:08d}.jpg',
+                   transform=torchvision.transforms.Compose([
+                       GroupScale(int(224)),
+                       GroupCenterCrop(crop_size),
+                       Stack(roll=(args.arch in ['BNInception', 'InceptionV3'])),
+                       ToTorchFormatTensor(div=(args.arch not in ['BNInception', 'InceptionV3'])),
+                       normalize,
+                   ]), dense_sample=args.dense_sample),
+        batch_size=88, shuffle=False,
+        num_workers=args.workers, pin_memory=True)

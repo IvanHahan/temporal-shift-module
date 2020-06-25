@@ -12,6 +12,7 @@ import torch
 from matplotlib import pyplot as plt
 import glob
 from tqdm import tqdm
+import pandas as pd
 np.random.seed(45)
 
 parser = argparse.ArgumentParser()
@@ -19,7 +20,12 @@ parser.add_argument('--frames_dir', default='/Users/UnicornKing/20180101_120040'
 parser.add_argument('--num_segments', default=8, type=int)
 parser.add_argument('--model',
                     default='checkpoint/TSM_nandos_RGB_resnet50_shift8_blockres_avg_segment8_e50/ckpt.pth.tar')
+parser.add_argument('--meta_output_path',
+                    default='out.csv')
+parser.add_argument('--output_path',
+                    default='out.avi')
 parser.add_argument('--device', default='cpu')
+parser.add_argument('--fps', default=10, type=int)
 
 action_to_idx = {'food_flip': 0,
                  'food_drizzle': 1,
@@ -66,14 +72,16 @@ if __name__ == '__main__':
     model.load_state_dict(sd)
     model.eval()
 
+    meta = pd.DataFrame(columns=['action', 'time_start', 'time_end'])
+
     r = np.random.randint(0, 255, (len(action_to_idx), 1))
     g = np.random.randint(0, 255, (len(action_to_idx), 1))
     b = np.random.randint(0, 255, (len(action_to_idx), 1))
     colors = np.column_stack([r, g, b]).tolist()
 
-    cache = {}
-    video_writer = cv2.VideoWriter('out.avi', 0, 10, (1200, 675))
-    for frame in tqdm(sorted(glob.glob(os.path.join(args.frames_dir, '*.jpg')))[:25000][::2]):
+    annot_cache = {}
+    video_writer = cv2.VideoWriter('out.avi', 0, args.fps, (1200, 675))
+    for i, frame in tqdm(enumerate(sorted(glob.glob(os.path.join(args.frames_dir, '*.jpg')))[:1000][::2])):
         frame_name = os.path.splitext(frame)[0]
         annot_name = frame_name + '.json'
         annot_path = os.path.join(args.frames_dir, annot_name)
@@ -86,11 +94,20 @@ if __name__ == '__main__':
                 if re.sub(r'_\d+', '', label) not in action_to_idx:
                     continue
 
-                cache.setdefault(label, [])
+                annot_cache.setdefault(label, [])
 
-                cache[label].append({'image': image, 'points': shape['points']})
+                annot_cache[label].append({'image': image, 'points': shape['points']})
 
-                if len(cache[label]) == args.num_segments:
+                if len(annot_cache[label]) == args.num_segments:
+
+                    if label not in meta['action'].values:
+                        meta = meta.append({
+                            'action': label,
+                            'time_start': i / args.fps,
+                            'time_end': i / args.fps
+                        }, ignore_index=True)
+                    else:
+                        meta.loc[meta['action'] == label, 'time_end'] = i / 10
 
                     transforms = torchvision.transforms.Compose([
                         GroupToPIL(),
@@ -103,7 +120,7 @@ if __name__ == '__main__':
 
                     rois = []
 
-                    for item in cache[label]:
+                    for item in annot_cache[label]:
                         x1, y1 = item['points'][0]
                         x2, y2 = item['points'][1]
                         roi = item['image'][y1:y2, x1:x2]
@@ -124,11 +141,12 @@ if __name__ == '__main__':
 
                     image = put_text(image, label_name, x1, y1, color, 3)
 
-                    cache[label].pop(0)
+                    annot_cache[label].pop(0)
             image = resize_image(image, 1200)
             video_writer.write(image)
         else:
             image = resize_image(image, 1200)
             video_writer.write(image)
     video_writer.release()
+    meta.to_csv(args.meta_output_path, index=False)
 
