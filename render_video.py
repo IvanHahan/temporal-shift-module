@@ -104,12 +104,14 @@ if __name__ == '__main__':
                     if label not in meta['action'].values:
                         meta = meta.append({
                             'action': label,
-                            'time_start': (i / args.fps) // 60 + (i / args.fps) % 60,
-                            'time_end': (i / args.fps) // 60 + (i / args.fps) % 60
+                            'time_start': i / args.fps,
+                            'time_end': i / args.fps
                         }, ignore_index=True)
                     else:
-                        meta.loc[meta['action'] == label, 'time_end'] = (i / args.fps) / 60
-                    continue
+                        meta.loc[meta['action'] == label, 'time_end'] = i / args.fps
+
+                    # annot_cache[label].pop(0)
+                    # continue
                     transforms = torchvision.transforms.Compose([
                         GroupToPIL(),
                         GroupScale(int(tsn.scale_size)),
@@ -143,15 +145,21 @@ if __name__ == '__main__':
                     image = put_text(image, label_name, x1, y1, color, 3)
 
                     annot_cache[label].pop(0)
-            continue
+            # continue
             image = resize_image(image, 1200)
             video_writer.write(image)
         else:
-            continue
+            # continue
             image = resize_image(image, 1200)
             video_writer.write(image)
     video_writer.release()
-    meta['time_start'] = meta['time_start'].apply(lambda s: re.sub('\.', ':', '{:.2f}'.format(s)))
-    meta['time_end'] = meta['time_end'].apply(lambda s: re.sub('\.', ':', '{:.2f}'.format(s)))
+
+    def secs2time(sec):
+        mins = sec // 60
+        sec = sec - mins * 60
+        return f'{int(mins)}:{int(sec)}'
+
+    meta['time_start'] = meta['time_start'].apply(secs2time)
+    meta['time_end'] = meta['time_end'].apply(secs2time)
     meta.to_csv(args.meta_output_path, index=False)
 
