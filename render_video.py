@@ -13,6 +13,7 @@ from matplotlib import pyplot as plt
 import glob
 from tqdm import tqdm
 import pandas as pd
+import re
 np.random.seed(45)
 
 parser = argparse.ArgumentParser()
@@ -81,7 +82,7 @@ if __name__ == '__main__':
 
     annot_cache = {}
     video_writer = cv2.VideoWriter('out.avi', 0, args.fps, (1200, 675))
-    for i, frame in tqdm(enumerate(sorted(glob.glob(os.path.join(args.frames_dir, '*.jpg')))[:1000][::2])):
+    for i, frame in tqdm(enumerate(sorted(glob.glob(os.path.join(args.frames_dir, '*.jpg')))[:25000][::2])):
         frame_name = os.path.splitext(frame)[0]
         annot_name = frame_name + '.json'
         annot_path = os.path.join(args.frames_dir, annot_name)
@@ -103,12 +104,12 @@ if __name__ == '__main__':
                     if label not in meta['action'].values:
                         meta = meta.append({
                             'action': label,
-                            'time_start': i / args.fps,
-                            'time_end': i / args.fps
+                            'time_start': (i / args.fps) // 60 + (i / args.fps) % 60,
+                            'time_end': (i / args.fps) // 60 + (i / args.fps) % 60
                         }, ignore_index=True)
                     else:
-                        meta.loc[meta['action'] == label, 'time_end'] = i / 10
-
+                        meta.loc[meta['action'] == label, 'time_end'] = (i / args.fps) / 60
+                    continue
                     transforms = torchvision.transforms.Compose([
                         GroupToPIL(),
                         GroupScale(int(tsn.scale_size)),
@@ -142,11 +143,15 @@ if __name__ == '__main__':
                     image = put_text(image, label_name, x1, y1, color, 3)
 
                     annot_cache[label].pop(0)
+            continue
             image = resize_image(image, 1200)
             video_writer.write(image)
         else:
+            continue
             image = resize_image(image, 1200)
             video_writer.write(image)
     video_writer.release()
+    meta['time_start'] = meta['time_start'].apply(lambda s: re.sub('\.', ':', '{:.2f}'.format(s)))
+    meta['time_end'] = meta['time_end'].apply(lambda s: re.sub('\.', ':', '{:.2f}'.format(s)))
     meta.to_csv(args.meta_output_path, index=False)
 
